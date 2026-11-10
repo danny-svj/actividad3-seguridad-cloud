@@ -1,0 +1,25 @@
+# LocalStack (plan Hobby) para simular S3 solo en esta computadora.
+# El token se lee de la variable LOCALSTACK_AUTH_TOKEN (archivo .env local, excluido de Git).
+services:
+  localstack:
+    container_name: localstack-actividad3
+    image: localstack/localstack:2026.10.6
+    ports:
+      - "127.0.0.1:4566:4566"          # solo localhost, no expuesto a la red
+    environment:
+      - SERVICES=s3,sts                 # S3 + STS (STS permite a Terraform confirmar la cuenta simulada 000000000000)
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:?Define LOCALSTACK_AUTH_TOKEN en .env}
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      # La imagen no incluye curl; se usa Python, que sí trae.
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4566/_localstack/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  localstack-data:

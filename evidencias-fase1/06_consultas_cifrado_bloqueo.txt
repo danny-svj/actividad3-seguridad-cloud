@@ -1,0 +1,38 @@
+# Variables usadas (credenciales ficticias de LocalStack):
+# export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1
+
+## Paso 8 · Buckets, cifrado y bloqueo de acceso público
+$ aws --endpoint-url http://localhost:4566 s3api list-buckets --query Buckets[].Name
+[
+    "actividad3-seguro-local"
+]
+
+$ aws --endpoint-url http://localhost:4566 s3api get-bucket-encryption --bucket actividad3-seguro-local
+{
+    "ServerSideEncryptionConfiguration": {
+        "Rules": [
+            {
+                "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                },
+                "BucketKeyEnabled": false,
+                "BlockedEncryptionTypes": {
+                    "EncryptionType": [
+                        "SSE-C"
+                    ]
+                }
+            }
+        ]
+    }
+}
+
+$ aws --endpoint-url http://localhost:4566 s3api get-public-access-block --bucket actividad3-seguro-local
+{
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+    }
+}
+

@@ -4,17 +4,17 @@
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <mxCell id="title" value="&lt;b&gt;Arquitectura segura – Actividad 3: IaC, contenedores y JWT&lt;/b&gt;" style="text;html=1;fontSize=20;align=center;" vertex="1" parent="1"><mxGeometry x="300" y="10" width="800" height="40" as="geometry"/></mxCell>
+        <mxCell id="title" value="&lt;b&gt;Arquitectura segura – Actividad 3: IaC (LocalStack), contenedores y JWT&lt;/b&gt;" style="text;html=1;fontSize=20;align=center;" vertex="1" parent="1"><mxGeometry x="300" y="10" width="800" height="40" as="geometry"/></mxCell>
 
         <mxCell id="dev" value="&lt;b&gt;Desarrollador&lt;/b&gt;&lt;br&gt;GitHub (código, .tf, Dockerfile)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1"><mxGeometry x="60" y="110" width="40" height="70" as="geometry"/></mxCell>
 
         <mxCell id="ci" value="&lt;b&gt;Pipeline DevSecOps&lt;/b&gt;&lt;br&gt;1. terraform validate / plan&lt;br&gt;2. trivy config (Dockerfile)&lt;br&gt;3. trivy image (0 CRITICAL)&lt;br&gt;4. OWASP ZAP API scan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="200" y="90" width="230" height="110" as="geometry"/></mxCell>
 
-        <mxCell id="tf" value="&lt;b&gt;Terraform (IaC)&lt;/b&gt;&lt;br&gt;terraform apply" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="200" y="260" width="230" height="60" as="geometry"/></mxCell>
+        <mxCell id="tf" value="&lt;b&gt;Terraform (IaC)&lt;/b&gt;&lt;br&gt;provider → localhost:4566" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="200" y="260" width="230" height="60" as="geometry"/></mxCell>
 
         <mxCell id="user" value="&lt;b&gt;Cliente / Usuario&lt;/b&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1"><mxGeometry x="60" y="520" width="40" height="70" as="geometry"/></mxCell>
 
-        <mxCell id="aws" value="AWS Cloud (us-east-1)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#FF9900;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=10;fontStyle=1;fontColor=#FF9900;" vertex="1" parent="1"><mxGeometry x="500" y="70" width="860" height="720" as="geometry"/></mxCell>
+        <mxCell id="aws" value="LocalStack · 127.0.0.1:4566 (simula AWS en Docker)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#FF9900;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=10;fontStyle=1;fontColor=#FF9900;" vertex="1" parent="1"><mxGeometry x="500" y="70" width="860" height="720" as="geometry"/></mxCell>
 
         <mxCell id="ctr" value="Contenedor Docker&lt;br&gt;node:22-alpine · USER node (no root) · multi-stage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="540" y="430" width="420" height="320" as="geometry"/></mxCell>
 
@@ -26,20 +26,20 @@
 
         <mxCell id="iam" value="&lt;b&gt;IAM Role&lt;/b&gt; actividad3-app-reader&lt;br&gt;Política mínimo privilegio:&lt;br&gt;s3:GetObject sobre bucket/*&lt;br&gt;solo con aws:SecureTransport" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="1020" y="440" width="300" height="90" as="geometry"/></mxCell>
 
-        <mxCell id="s3" value="&lt;b&gt;S3 Bucket&lt;/b&gt; actividad3-seguro-2024-dags&lt;br&gt;✔ SSE AES-256&lt;br&gt;✔ Block Public Access (4/4)&lt;br&gt;✔ ACLs deshabilitadas (BucketOwnerEnforced)&lt;br&gt;✔ Versionado&lt;br&gt;✔ Política: deniega HTTP sin TLS" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=12;fillColor=#d5e8d4;strokeColor=#82b366;align=left;spacingLeft=10;" vertex="1" parent="1"><mxGeometry x="1020" y="140" width="300" height="160" as="geometry"/></mxCell>
+        <mxCell id="s3" value="&lt;b&gt;S3 Bucket (simulado)&lt;/b&gt; actividad3-seguro-local&lt;br&gt;✔ SSE-S3 AES-256&lt;br&gt;✔ Block Public Access (4/4)&lt;br&gt;✔ Región us-east-1 simulada&lt;br&gt;Credenciales ficticias (test/test)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=12;fillColor=#d5e8d4;strokeColor=#82b366;align=left;spacingLeft=10;" vertex="1" parent="1"><mxGeometry x="1020" y="140" width="300" height="160" as="geometry"/></mxCell>
 
-        <mxCell id="internet" value="Internet público&lt;br&gt;✘ acceso directo bloqueado" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="560" y="140" width="200" height="110" as="geometry"/></mxCell>
+        <mxCell id="internet" value="Red externa&lt;br&gt;✘ puerto publicado solo en 127.0.0.1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="560" y="140" width="200" height="110" as="geometry"/></mxCell>
 
         <mxCell id="e1" value="push" style="endArrow=classic;html=1;" edge="1" parent="1" source="dev" target="ci"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e2" value="si pasa los controles" style="endArrow=classic;html=1;" edge="1" parent="1" source="ci" target="tf"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e3" value="crea bucket + IAM" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="tf" target="s3"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="460" y="290"/><mxPoint x="460" y="340"/><mxPoint x="1170" y="340"/></Array></mxGeometry></mxCell>
+        <mxCell id="e3" value="3 recursos: bucket, cifrado, bloqueo" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="tf" target="s3"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="460" y="290"/><mxPoint x="460" y="340"/><mxPoint x="1170" y="340"/></Array></mxGeometry></mxCell>
         <mxCell id="e4" value="HTTPS + Bearer JWT" style="endArrow=classic;html=1;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="user" target="helmet"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e5" style="endArrow=classic;html=1;" edge="1" parent="1" source="helmet" target="authn"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e6" style="endArrow=classic;html=1;" edge="1" parent="1" source="authn" target="authz"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e7" style="endArrow=classic;html=1;" edge="1" parent="1" source="authz" target="ep"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e8" value="asume rol" style="endArrow=classic;html=1;dashed=1;" edge="1" parent="1" source="ctr" target="iam"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e9" value="GetObject (TLS, cifrado)" style="endArrow=classic;html=1;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="iam" target="s3"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e10" value="DENEGADO" style="endArrow=cross;html=1;strokeColor=#b85450;strokeWidth=2;dashed=1;fontColor=#b85450;fontStyle=1;" edge="1" parent="1" source="internet" target="s3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e10" value="NO ALCANZABLE" style="endArrow=cross;html=1;strokeColor=#b85450;strokeWidth=2;dashed=1;fontColor=#b85450;fontStyle=1;" edge="1" parent="1" source="internet" target="s3"><mxGeometry relative="1" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>
   </diagram>

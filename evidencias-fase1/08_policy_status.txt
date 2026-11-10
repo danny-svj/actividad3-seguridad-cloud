@@ -1,0 +1,15 @@
+## Paso 11 · Estado de la política del bucket
+$ aws --endpoint-url http://localhost:4566 s3api get-bucket-policy-status --bucket actividad3-seguro-local
+
+aws: [ERROR]: An error occurred (NoSuchBucketPolicy) when calling the GetBucketPolicyStatus operation: The bucket policy does not exist
+
+Additional error details:
+BucketName: actividad3-seguro-local
+
+$ aws --endpoint-url http://localhost:4566 s3api get-bucket-policy --bucket actividad3-seguro-local
+
+aws: [ERROR]: An error occurred (NoSuchBucketPolicy) when calling the GetBucketPolicy operation: The bucket policy does not exist
+
+Additional error details:
+BucketName: actividad3-seguro-local
+

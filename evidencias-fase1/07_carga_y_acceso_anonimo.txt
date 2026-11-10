@@ -1,0 +1,25 @@
+## Paso 9 · Carga de archivo de prueba
+$ cat prueba.txt
+Archivo de prueba de la Actividad 3 - 2026-11-10T23:41:15Z
+
+$ aws --endpoint-url http://localhost:4566 s3 cp prueba.txt s3://actividad3-seguro-local/prueba.txt
+Completed 59 Bytes/59 Bytes (672 Bytes/s) with 1 file(s) remainingupload: ./prueba.txt to s3://actividad3-seguro-local/prueba.txt   
+
+$ aws --endpoint-url http://localhost:4566 s3 ls s3://actividad3-seguro-local/
+2026-11-10 17:41:15         59 prueba.txt
+
+$ aws --endpoint-url http://localhost:4566 s3api head-object --bucket actividad3-seguro-local --key prueba.txt --query {Tamano:ContentLength,Cifrado:ServerSideEncryption}
+{
+    "Tamano": 59,
+    "Cifrado": "AES256"
+}
+
+## Paso 10 · Intento de descarga anónima (sin firmar)
+$ aws --endpoint-url http://localhost:4566 s3 cp s3://actividad3-seguro-local/prueba.txt descarga_anonima.txt --no-sign-request
+Completed 59 Bytes/59 Bytes (3.6 KiB/s) with 1 file(s) remainingdownload: s3://actividad3-seguro-local/prueba.txt to ./descarga_anonima.txt
+
+$ curl -s -w '\nHTTP %{http_code}\n' http://localhost:4566/actividad3-seguro-local/prueba.txt
+Archivo de prueba de la Actividad 3 - 2026-11-10T23:41:15Z
+
+HTTP 200
+

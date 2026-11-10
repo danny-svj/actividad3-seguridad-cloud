@@ -1,58 +1,155 @@
 # Actividad 3 – Seguridad en entornos cloud (IaC, contenedores y JWT)
 
-**Alumno:** Daniel Alejandro González Salazar · **Fecha:** 9 de noviembre de 2026
+**Alumno:** Daniel Alejandro González Salazar · **Fecha:** 10 de noviembre de 2026
 
-Se aplicaron prácticas de seguridad en tres capas y cada control quedó validado:
+Prácticas de seguridad aplicadas en tres capas, cada una validada con evidencia:
 
-| Resultado | Evidencia |
-| --- | --- |
-| Bucket S3 cifrado (AES-256), sin acceso público, versionado y solo HTTPS | `IsPublic: false` · [validacion_s3.txt](reportes/validacion_s3.txt) |
-| Imagen Docker final con **0 vulnerabilidades** (node:14 tenía 23 críticas) | [trivy_actividad3-api_seguro.txt](reportes/trivy_actividad3-api_seguro.txt) |
-| API JWT: **7/7** pruebas de autenticación/autorización | [pruebas_jwt.txt](reportes/pruebas_jwt.txt) |
-| OWASP ZAP: **120 PASS, 0 FAIL, 0 WARN** | [zap_reporte.html](reportes/zap_reporte.html) |
+| Fase | Resultado | Evidencia |
+| --- | --- | --- |
+| 1 · IaC | Bucket S3 simulado en **LocalStack**: cifrado AES256 + 4 controles de bloqueo público, creado con Terraform (**3 recursos**) | [evidencias-fase1/](evidencias-fase1/) |
+| 2 · Contenedores | Imagen Docker final con **0 vulnerabilidades** (node:14 tenía 23 críticas) | [trivy_actividad3-api_seguro.txt](reportes/trivy_actividad3-api_seguro.txt) |
+| 3 · Desarrollo seguro | API JWT: **7/7** pruebas de autenticación/autorización · OWASP ZAP **120 PASS, 0 FAIL** | [pruebas_jwt.txt](reportes/pruebas_jwt.txt) · [zap_reporte.html](reportes/zap_reporte.html) |
+
+> ⚠️ **Nada de la Fase 1 apunta a AWS real.** Todo corre en un contenedor LocalStack en `localhost`, con credenciales ficticias. No se requiere cuenta AWS.
 
 ## Índice
 
-1. [Herramientas](#herramientas)
-2. [Fase 1. Configuración segura en la nube con IaC](#fase-1-configuración-segura-en-la-nube-con-iac)
-3. [Política de IAM](#política-de-iam-de-mínimo-privilegio)
-4. [Fase 2. Seguridad de contenedores](#fase-2-seguridad-de-contenedores)
-5. [Fase 3. Desarrollo seguro y autenticación](#fase-3-desarrollo-seguro-y-autenticación)
-6. [Diagrama de arquitectura](#diagrama-de-arquitectura)
-7. [Conclusiones](#conclusiones)
-8. [Estructura del repositorio](#estructura-del-repositorio)
-9. [Referencias](#referencias)
-
-## Herramientas
-
-| Herramienta | Versión | Uso |
-| --- | --- | --- |
-| Terraform | 1.17.1 (provider AWS 5.100.0) | IaC del bucket S3 |
-| AWS CLI | 2.34.16 | Validación del bucket |
-| AWS Academy Learner Lab | us-east-1 | Cuenta de laboratorio |
-| Docker | 29.2.1 | Construcción de imágenes |
-| Trivy | 0.76.2 | Escaneo de vulnerabilidades y configuración |
-| Node.js + Express + jsonwebtoken | Node 22, Express 4.21, jsonwebtoken 9.0 | API con JWT |
-| OWASP ZAP | stable (imagen Docker) | Escaneo de seguridad de la API |
+1. [Fase 1. Bucket S3 seguro con Terraform y LocalStack](#fase-1-bucket-s3-seguro-con-terraform-y-localstack)
+2. [Política de IAM](#política-de-iam-de-mínimo-privilegio)
+3. [Fase 2. Seguridad de contenedores](#fase-2-seguridad-de-contenedores)
+4. [Fase 3. Desarrollo seguro y autenticación](#fase-3-desarrollo-seguro-y-autenticación)
+5. [Diagrama de arquitectura](#diagrama-de-arquitectura)
+6. [Conclusiones](#conclusiones)
+7. [Estructura del repositorio](#estructura-del-repositorio)
+8. [Referencias](#referencias)
 
 ---
 
-## Fase 1. Configuración segura en la nube con IaC
+## Fase 1. Bucket S3 seguro con Terraform y LocalStack
 
-El bucket **`actividad3-seguro-2024-dags`** quedó desplegado en `us-east-1` con cifrado AES-256, bloqueo de acceso público en sus 4 opciones, ACLs deshabilitadas, versionado y una política que rechaza conexiones sin HTTPS. El nombre de la guía (`actividad3-seguro-2024`) ya estaba ocupado; como los nombres de S3 son únicos en todo el mundo, se le agregaron iniciales.
+**Propósito:** construir un bucket S3 simulado con Terraform, declarar cifrado AES-256 y los controles de bloqueo de acceso público, y verificar qué está realmente configurado.
 
-### Ajustes respecto al script de la guía
+| Parámetro | Valor |
+| --- | --- |
+| Bucket | `actividad3-seguro-local` |
+| Región | `us-east-1` |
+| Endpoint | `http://localhost:4566` |
+| Cifrado | SSE-S3 · AES256 |
+| Plan Terraform | 3 recursos |
+| Acceso público | 4 controles de bloqueo |
 
-- **Sintaxis actualizada.** `acl` y `server_side_encryption_configuration` dentro de `aws_s3_bucket` están obsoletos desde el provider AWS v4; se pasaron a recursos independientes ([terraform/main.tf](terraform/main.tf)).
-- **Restricción del Learner Lab.** La política de la organización (SCP) de AWS Academy niega `s3:GetBucketObjectLockConfiguration`. El recurso `aws_s3_bucket` lee ese valor en los providers v4, v5 y v6, y el `apply` fallaba. Se resolvió con Terraform gestionando un stack de CloudFormation con la misma configuración ([terraform-learnerlab/main.tf](terraform-learnerlab/main.tf)).
+```
+Terraform  ──►  LocalStack :4566 (contenedor Docker, solo localhost)  ──►  Bucket S3
+(código)                                                                  · cifrado AES256
+                                                                          · bloqueo público ×4
+```
 
-### Script de Terraform desplegado ([terraform-learnerlab/main.tf](terraform-learnerlab/main.tf))
+### Requisitos
+
+| Herramienta | Uso | Versión usada |
+| --- | --- | --- |
+| Docker Desktop | Ejecutar contenedores | 29.2.1 |
+| Docker Compose v2 | Levantar LocalStack | v5.1.0 |
+| Terraform | Definir y aplicar IaC | 1.17.1 (provider AWS 5.100.0) |
+| AWS CLI v2 | Consultar el S3 simulado | 2.34.16 |
+| LocalStack (plan **Hobby — Free**) | Emular S3 localmente | 2026.10.6 |
+
+Se necesita una cuenta gratuita en [localstack.cloud](https://www.localstack.cloud/pricing) (LocalStack for AWS → **Hobby — Free**) y su **Auth Token**. El token es un secreto: va solo en un archivo `.env` local que **está en `.gitignore`**.
+
+### Instrucciones de ejecución
+
+```bash
+# 0. Clonar el repositorio
+git clone https://github.com/danny-svj/actividad3-seguridad-cloud.git
+cd actividad3-seguridad-cloud
+
+# 1. Token de LocalStack (NO se sube a Git)
+cp .env.example .env          # pega tu token en LOCALSTACK_AUTH_TOKEN=
+
+# 2. Fase A · Levantar LocalStack y comprobar salud
+docker compose up -d
+docker compose ps             # debe decir (healthy)
+curl -s http://localhost:4566/_localstack/health
+
+# 3. Fase B · Terraform
+terraform init
+terraform validate
+terraform plan                # Plan: 3 to add
+terraform apply
+
+# 4. Fase C · Comprobar con AWS CLI (credenciales ficticias + endpoint local)
+export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1
+E=http://localhost:4566; B=actividad3-seguro-local
+aws --endpoint-url $E s3api list-buckets
+aws --endpoint-url $E s3api get-bucket-encryption --bucket $B
+aws --endpoint-url $E s3api get-public-access-block --bucket $B
+aws --endpoint-url $E s3 cp prueba.txt s3://$B/prueba.txt
+aws --endpoint-url $E s3 ls s3://$B/
+aws --endpoint-url $E s3 cp s3://$B/prueba.txt - --no-sign-request   # acceso anónimo
+aws --endpoint-url $E s3api get-bucket-policy-status --bucket $B
+
+# 5. Limpieza
+terraform destroy && docker compose down
+```
+
+### Fase A · Docker Compose ([compose.yaml](compose.yaml))
+
+```yaml
+# LocalStack (plan Hobby) para simular S3 solo en esta computadora.
+# El token se lee de la variable LOCALSTACK_AUTH_TOKEN (archivo .env local, excluido de Git).
+services:
+  localstack:
+    container_name: localstack-actividad3
+    image: localstack/localstack:2026.10.6
+    ports:
+      - "127.0.0.1:4566:4566"          # solo localhost, no expuesto a la red
+    environment:
+      - SERVICES=s3,sts                 # S3 + STS (STS permite a Terraform confirmar la cuenta simulada 000000000000)
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:?Define LOCALSTACK_AUTH_TOKEN en .env}
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      # La imagen no incluye curl; se usa Python, que sí trae.
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4566/_localstack/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  localstack-data:
+```
+
+- El puerto se publica **solo en `127.0.0.1`**: nadie en la red puede alcanzar el simulador.
+- El token llega por variable de entorno desde `.env`; si falta, Compose se detiene con un mensaje.
+- La imagen de LocalStack ya no incluye `curl`, por eso el healthcheck usa Python.
+- Se habilita `sts` además de `s3` para que Terraform confirme que habla con la cuenta simulada `000000000000` (ver candado abajo).
+
+**Contenedor saludable** ([02_localstack_saludable.txt](evidencias-fase1/02_localstack_saludable.txt)):
+
+```
+$ docker compose ps
+NAME                    IMAGE                             STATUS                    PORTS
+localstack-actividad3   localstack/localstack:2026.10.6   Up 12 seconds (healthy)   127.0.0.1:4566->4566/tcp
+
+$ curl -s http://localhost:4566/_localstack/health
+{
+  "services": {
+    "s3": "available",
+    "sts": "available"
+  },
+  "edition": "pro",
+  "version": "2026.10.6"
+}
+```
+
+### Fase B · Terraform
+
+**[providers.tf](providers.tf)** — provider apuntando solo a LocalStack:
 
 ```hcl
-# Variante para AWS Academy Learner Lab.
-# El SCP del laboratorio niega s3:GetBucketObjectLockConfiguration, que el recurso
-# aws_s3_bucket del provider lee siempre. Por eso Terraform gestiona el bucket mediante
-# un stack de CloudFormation con la MISMA configuración segura que ../terraform/main.tf.
 terraform {
   required_version = ">= 1.5"
   required_providers {
@@ -63,93 +160,52 @@ terraform {
   }
 }
 
+# Provider apuntando EXCLUSIVAMENTE a LocalStack en localhost.
 provider "aws" {
-  region = "us-east-1"
-}
+  region     = "us-east-1"
+  access_key = "test" # credenciales ficticias que acepta LocalStack
+  secret_key = "test"
 
-variable "bucket_name" {
-  type    = string
-  default = "actividad3-seguro-2024-dags"
-}
+  # Candado: LocalStack usa la cuenta 000000000000. Si por error se apuntara a
+  # AWS real, la cuenta no coincidiría y Terraform se detendría antes de crear nada.
+  allowed_account_ids = ["000000000000"]
 
-resource "aws_cloudformation_stack" "secure_bucket" {
-  name = "actividad3-secure-bucket"
-  template_body = jsonencode({
-    AWSTemplateFormatVersion = "2010-09-09"
-    Resources = {
-      SecureBucket = {
-        Type = "AWS::S3::Bucket"
-        Properties = {
-          BucketName = var.bucket_name
-          # Cifrado del lado del servidor AES-256 (SSE-S3)
-          BucketEncryption = {
-            ServerSideEncryptionConfiguration = [{
-              ServerSideEncryptionByDefault = { SSEAlgorithm = "AES256" }
-            }]
-          }
-          # Bloqueo total de acceso público
-          PublicAccessBlockConfiguration = {
-            BlockPublicAcls       = true
-            BlockPublicPolicy     = true
-            IgnorePublicAcls      = true
-            RestrictPublicBuckets = true
-          }
-          # ACLs deshabilitadas (equivalente a acl = "private")
-          OwnershipControls = {
-            Rules = [{ ObjectOwnership = "BucketOwnerEnforced" }]
-          }
-          VersioningConfiguration = { Status = "Enabled" }
-          Tags                    = [{ Key = "Proyecto", Value = "Actividad3-Seguridad" }]
-        }
-      }
-      # Política: deniega cualquier acceso sin TLS
-      SecureBucketPolicy = {
-        Type = "AWS::S3::BucketPolicy"
-        Properties = {
-          Bucket = { Ref = "SecureBucket" }
-          PolicyDocument = {
-            Version = "2012-10-17"
-            Statement = [{
-              Sid       = "DenyInsecureTransport"
-              Effect    = "Deny"
-              Principal = "*"
-              Action    = "s3:*"
-              Resource = [
-                { "Fn::GetAtt" = ["SecureBucket", "Arn"] },
-                { "Fn::Join" = ["", [{ "Fn::GetAtt" = ["SecureBucket", "Arn"] }, "/*"]] }
-              ]
-              Condition = { Bool = { "aws:SecureTransport" = "false" } }
-            }]
-          }
-        }
-      }
-    }
-    Outputs = {
-      BucketName = { Value = { Ref = "SecureBucket" } }
-    }
-  })
-}
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  s3_use_path_style           = true
 
-output "bucket_name" {
-  value = aws_cloudformation_stack.secure_bucket.outputs["BucketName"]
+  endpoints {
+    s3  = "http://localhost:4566"
+    sts = "http://localhost:4566"
+  }
 }
 ```
 
-<details>
-<summary><b>Versión estándar para una cuenta AWS normal</b> (<a href="terraform/main.tf">terraform/main.tf</a>, extracto)</summary>
+> 🔒 **Candado contra AWS real:** `allowed_account_ids = ["000000000000"]`. Si por error las credenciales o el endpoint apuntaran a AWS real, el ID de cuenta no coincidiría y Terraform abortaría antes de crear nada.
+
+**[main.tf](main.tf)** — bucket, cifrado y los cuatro controles:
 
 ```hcl
+variable "bucket_name" {
+  description = "Nombre del bucket simulado"
+  type        = string
+  default     = "actividad3-seguro-local"
+}
+
+# Recurso 1: bucket S3
 resource "aws_s3_bucket" "secure_bucket" {
   bucket = var.bucket_name
+
+  tags = {
+    Proyecto = "Actividad3-Seguridad"
+    Entorno  = "LocalStack"
+  }
 }
 
-resource "aws_s3_bucket_ownership_controls" "secure_bucket" {
-  bucket = aws_s3_bucket.secure_bucket.id
-  rule { object_ownership = "BucketOwnerEnforced" }
-}
-
+# Recurso 2: cifrado del lado del servidor SSE-S3 (AES-256)
 resource "aws_s3_bucket_server_side_encryption_configuration" "secure_bucket" {
   bucket = aws_s3_bucket.secure_bucket.id
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -157,60 +213,73 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "secure_bucket" {
   }
 }
 
+# Recurso 3: los cuatro controles de bloqueo de acceso público
 resource "aws_s3_bucket_public_access_block" "secure_bucket" {
-  bucket                  = aws_s3_bucket.secure_bucket.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  bucket = aws_s3_bucket.secure_bucket.id
+
+  block_public_acls       = true # rechaza nuevas ACL públicas
+  ignore_public_acls      = true # ignora ACL públicas existentes
+  block_public_policy     = true # rechaza políticas de bucket públicas
+  restrict_public_buckets = true # limita el acceso si hubiera una política pública
+}
+
+output "bucket_name" {
+  value = aws_s3_bucket.secure_bucket.id
 }
 ```
-</details>
 
-### Resultado de `terraform apply`
+**Validación y plan** ([03](evidencias-fase1/03_terraform_validate.txt) · [04](evidencias-fase1/04_terraform_plan.txt)):
 
 ```
-aws_cloudformation_stack.secure_bucket: Creation complete after 28s
-Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
-Outputs:
-bucket_name = "actividad3-seguro-2024-dags"
+$ terraform validate
+Success! The configuration is valid.
+
+$ terraform plan
+  # aws_s3_bucket.secure_bucket will be created
+  # aws_s3_bucket_public_access_block.secure_bucket will be created
+  # aws_s3_bucket_server_side_encryption_configuration.secure_bucket will be created
+Plan: 3 to add, 0 to change, 0 to destroy.
 ```
 
-### Validación
+**Aplicación** ([05_terraform_apply.txt](evidencias-fase1/05_terraform_apply.txt)):
 
-| Control | Comando o prueba | Resultado |
+```
+aws_s3_bucket.secure_bucket: Creation complete after 0s [id=actividad3-seguro-local]
+aws_s3_bucket_public_access_block.secure_bucket: Creation complete after 0s [id=actividad3-seguro-local]
+aws_s3_bucket_server_side_encryption_configuration.secure_bucket: Creation complete after 0s [id=actividad3-seguro-local]
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+$ terraform state list
+aws_s3_bucket.secure_bucket
+aws_s3_bucket_public_access_block.secure_bucket
+aws_s3_bucket_server_side_encryption_configuration.secure_bucket
+```
+
+### Fase C · Comprobaciones con AWS CLI
+
+| Paso | Comprobación | Resultado |
 | --- | --- | --- |
-| Bucket no público | `get-bucket-policy-status` | `IsPublic: false` ✅ |
-| Bloqueo de acceso público | `get-public-access-block` | Las 4 opciones en `true` ✅ |
-| Cifrado | `get-bucket-encryption` | `SSEAlgorithm: AES256` ✅ |
-| Cifrado de objetos | `head-object` de un archivo de prueba | `ServerSideEncryption: AES256` ✅ |
-| Versionado | `get-bucket-versioning` | `Enabled` ✅ |
-| ACLs deshabilitadas | `get-bucket-ownership-controls` | `BucketOwnerEnforced` ✅ |
-| Acceso anónimo al bucket | `curl` sin credenciales | HTTP 403 (denegado) ✅ |
-| Lectura anónima de un objeto | `curl` sin credenciales | HTTP 403 (denegado) ✅ |
+| 8 | `list-buckets` | `actividad3-seguro-local` ✅ |
+| 8 | `get-bucket-encryption` | `SSEAlgorithm: AES256` ✅ |
+| 8 | `get-public-access-block` | Los 4 controles en `true` ✅ |
+| 9 | Subir `prueba.txt` y listar | Aparece en el listado (59 bytes, cifrado `AES256`) ✅ |
+| 10 | Descarga anónima (`--no-sign-request` y `curl`) | **Permitida (HTTP 200)** ⚠️ limitación del simulador |
+| 11 | `get-bucket-policy-status` | `NoSuchBucketPolicy` (no hay política) ℹ️ |
 
 <details>
-<summary><b>Salida completa de la validación</b></summary>
+<summary><b>Paso 8 · Salida completa</b> (<a href="evidencias-fase1/06_consultas_cifrado_bloqueo.txt">06_consultas_cifrado_bloqueo.txt</a>)</summary>
 
 ```
-### aws s3api get-bucket-policy-status --bucket actividad3-seguro-2024-dags
-{
-    "PolicyStatus": {
-        "IsPublic": false
-    }
-}
+# Variables usadas (credenciales ficticias de LocalStack):
+# export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1
 
-### aws s3api get-public-access-block --bucket actividad3-seguro-2024-dags
-{
-    "PublicAccessBlockConfiguration": {
-        "BlockPublicAcls": true,
-        "IgnorePublicAcls": true,
-        "BlockPublicPolicy": true,
-        "RestrictPublicBuckets": true
-    }
-}
+## Paso 8 · Buckets, cifrado y bloqueo de acceso público
+$ aws --endpoint-url http://localhost:4566 s3api list-buckets --query Buckets[].Name
+[
+    "actividad3-seguro-local"
+]
 
-### aws s3api get-bucket-encryption --bucket actividad3-seguro-2024-dags
+$ aws --endpoint-url http://localhost:4566 s3api get-bucket-encryption --bucket actividad3-seguro-local
 {
     "ServerSideEncryptionConfiguration": {
         "Rules": [
@@ -229,38 +298,116 @@ bucket_name = "actividad3-seguro-2024-dags"
     }
 }
 
-### aws s3api get-bucket-versioning --bucket actividad3-seguro-2024-dags
+$ aws --endpoint-url http://localhost:4566 s3api get-public-access-block --bucket actividad3-seguro-local
 {
-    "Status": "Enabled"
-}
-
-### aws s3api get-bucket-ownership-controls --bucket actividad3-seguro-2024-dags
-{
-    "OwnershipControls": {
-        "Rules": [
-            {
-                "ObjectOwnership": "BucketOwnerEnforced"
-            }
-        ]
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
     }
 }
 
-### Prueba: acceso anónimo desde Internet
-HTTP 403 (403 = acceso denegado)
-
-### Prueba: subir objeto y verificar cifrado
-"AES256"
-
-### Prueba: lectura anónima del objeto
-HTTP 403
 ```
 </details>
+
+<details>
+<summary><b>Pasos 9 y 10 · Carga y acceso anónimo</b> (<a href="evidencias-fase1/07_carga_y_acceso_anonimo.txt">07_carga_y_acceso_anonimo.txt</a>)</summary>
+
+```
+## Paso 9 · Carga de archivo de prueba
+$ cat prueba.txt
+Archivo de prueba de la Actividad 3 - 2026-11-10T23:41:15Z
+
+$ aws --endpoint-url http://localhost:4566 s3 cp prueba.txt s3://actividad3-seguro-local/prueba.txt
+Completed 59 Bytes/59 Bytes (672 Bytes/s) with 1 file(s) remaining
+upload: ./prueba.txt to s3://actividad3-seguro-local/prueba.txt   
+
+$ aws --endpoint-url http://localhost:4566 s3 ls s3://actividad3-seguro-local/
+2026-11-10 17:41:15         59 prueba.txt
+
+$ aws --endpoint-url http://localhost:4566 s3api head-object --bucket actividad3-seguro-local --key prueba.txt --query {Tamano:ContentLength,Cifrado:ServerSideEncryption}
+{
+    "Tamano": 59,
+    "Cifrado": "AES256"
+}
+
+## Paso 10 · Intento de descarga anónima (sin firmar)
+$ aws --endpoint-url http://localhost:4566 s3 cp s3://actividad3-seguro-local/prueba.txt descarga_anonima.txt --no-sign-request
+Completed 59 Bytes/59 Bytes (3.6 KiB/s) with 1 file(s) remaining
+download: s3://actividad3-seguro-local/prueba.txt to ./descarga_anonima.txt
+
+$ curl -s -w '\nHTTP %{http_code}\n' http://localhost:4566/actividad3-seguro-local/prueba.txt
+Archivo de prueba de la Actividad 3 - 2026-11-10T23:41:15Z
+
+HTTP 200
+
+```
+</details>
+
+<details>
+<summary><b>Paso 11 · Estado de la política</b> (<a href="evidencias-fase1/08_policy_status.txt">08_policy_status.txt</a>)</summary>
+
+```
+## Paso 11 · Estado de la política del bucket
+$ aws --endpoint-url http://localhost:4566 s3api get-bucket-policy-status --bucket actividad3-seguro-local
+
+aws: [ERROR]: An error occurred (NoSuchBucketPolicy) when calling the GetBucketPolicyStatus operation: The bucket policy does not exist
+
+Additional error details:
+BucketName: actividad3-seguro-local
+
+$ aws --endpoint-url http://localhost:4566 s3api get-bucket-policy --bucket actividad3-seguro-local
+
+aws: [ERROR]: An error occurred (NoSuchBucketPolicy) when calling the GetBucketPolicy operation: The bucket policy does not exist
+
+Additional error details:
+BucketName: actividad3-seguro-local
+
+```
+</details>
+
+#### Interpretación del paso 10: acceso anónimo permitido
+
+LocalStack **aceptó la descarga sin firmar** aunque el bucket tiene los 4 controles de bloqueo público. Esto se trata como **limitación del simulador**, no como exposición real:
+
+- LocalStack, por defecto, **no evalúa autorización** (IAM ni políticas de recursos; la opción `ENFORCE_IAM` viene desactivada). Su objetivo es emular las API de AWS para desarrollo, no replicar todo el modelo de permisos.
+- El bloqueo de acceso público sí quedó **declarado y consultable** (paso 8), pero el simulador no lo **aplica** a las solicitudes.
+- Además, el puerto está publicado solo en `127.0.0.1`, así que nadie fuera de esta computadora puede alcanzarlo.
+- **Validación independiente:** en una prueba previa en AWS real (AWS Academy Learner Lab) con la misma configuración, el acceso anónimo fue **rechazado con HTTP 403** ([referencia-aws-real/validacion_s3_learnerlab.txt](reportes/referencia-aws-real/validacion_s3_learnerlab.txt)).
+
+#### Interpretación del paso 11: `NoSuchBucketPolicy`
+
+Significa que el bucket **no tiene política de bucket** asociada; no es una confirmación de exposición pública. `get-bucket-policy-status` solo evalúa si una política existente es pública. Sin política no hay nada que la haga pública, y con los 4 controles en `true` cualquier política pública futura sería rechazada (`BlockPublicPolicy`) o neutralizada (`RestrictPublicBuckets`).
+
+### Dashboard de LocalStack
+
+En [app.localstack.cloud](https://app.localstack.cloud) → **Resource Browser → S3**, con el endpoint `http://localhost:4566`, se localiza el bucket `actividad3-seguro-local`, el archivo `prueba.txt` y su configuración de cifrado.
+
+> 📸 Captura del Dashboard: se agrega en `evidencias-fase1/dashboard_localstack.png`.
+
+### Conclusión de la Fase 1: declarado vs. consultado vs. aplicado
+
+| Nivel | Qué es | Evidencia en esta práctica |
+| --- | --- | --- |
+| **Infraestructura declarada** | Lo que el código *dice* que debe existir | `main.tf`: bucket + AES256 + 4 bloqueos → `Plan: 3 to add` |
+| **Configuración consultada** | Lo que el servicio *reporta* que tiene | AWS CLI: `AES256` y los 4 controles en `true` |
+| **Seguridad aplicada** | Lo que *realmente ocurre* ante una solicitud | Descarga anónima **permitida** en LocalStack; **denegada (403)** en AWS real |
+
+Que algo esté declarado y aparezca en la configuración no prueba que se aplique. La seguridad se confirma con pruebas de comportamiento, y en un simulador esas pruebas necesitan una validación independiente en el entorno real.
+
+### Criterios de seguridad cumplidos
+
+- ✅ Token de LocalStack solo en `.env` local, excluido por `.gitignore` (junto con `*.tfstate`, `.terraform/` y credenciales).
+- ✅ Credenciales ficticias (`test`/`test`); ninguna información confidencial real.
+- ✅ Ningún comando apunta a AWS: endpoint `localhost:4566` + candado `allowed_account_ids`.
+- ✅ El acceso anónimo aceptado por LocalStack se documenta como limitación del simulador, contrastado con AWS real.
 
 ---
 
 ## Política de IAM de mínimo privilegio
 
-La aplicación solo recibe `s3:GetObject` sobre los objetos de su bucket y solo por HTTPS. No puede listar, escribir, borrar ni tocar otros buckets. La política se asocia a un rol (`actividad3-app-reader`) que la aplicación asume, nunca a usuarios con llaves fijas.
+La aplicación solo recibe `s3:GetObject` sobre los objetos de su bucket y solo por HTTPS. No puede listar, escribir, borrar ni tocar otros buckets. La política se asocia a un rol que la aplicación asume, nunca a usuarios con llaves fijas ([iam/iam-policy.json](iam/iam-policy.json)):
 
 ```json
 {
@@ -270,7 +417,7 @@ La aplicación solo recibe `s3:GetObject` sobre los objetos de su bucket y solo 
       "Sid": "AllowReadObjectsOnly",
       "Effect": "Allow",
       "Action": ["s3:GetObject"],
-      "Resource": "arn:aws:s3:::actividad3-seguro-2024-dags/*",
+      "Resource": "arn:aws:s3:::actividad3-seguro-local/*",
       "Condition": {
         "Bool": { "aws:SecureTransport": "true" }
       }
@@ -278,8 +425,6 @@ La aplicación solo recibe `s3:GetObject` sobre los objetos de su bucket y solo 
   ]
 }
 ```
-
-En [terraform/main.tf](terraform/main.tf) el rol y la política se crean con `aws_iam_role` y `aws_iam_role_policy` usando `-var create_iam_role=true`. En el Learner Lab esto queda desactivado porque el laboratorio no permite `iam:CreateRole`.
 
 ---
 
@@ -483,7 +628,7 @@ ZAP accedió a los endpoints protegidos sin token y recibió 401 en todos: no en
 
 ## Diagrama de arquitectura
 
-Todo dato pasa por al menos dos controles antes de llegar al bucket: la API exige JWT y rol, y S3 exige un rol IAM y conexión TLS. El acceso anónimo desde Internet se rechaza con 403.
+Todo corre en local: Terraform declara el bucket en LocalStack (solo en `127.0.0.1:4566`) y la API exige JWT y rol antes de responder.
 
 ![Diagrama de arquitectura segura](diagrama/arquitectura.png)
 
@@ -493,42 +638,31 @@ Versión editable en draw.io: [diagrama/arquitectura-segura.drawio](diagrama/arq
 
 ## Conclusiones
 
-- **IaC hace la seguridad repetible.** Cifrado, bloqueo público y solo HTTPS quedan escritos en código, no dependen de configurar la consola a mano. Las restricciones del entorno (el SCP del Learner Lab) obligan a adaptar la herramienta sin bajar los controles.
+- **Declarar no es lo mismo que aplicar.** Terraform y AWS CLI confirman que el cifrado y los 4 bloqueos están configurados, pero LocalStack dejó pasar una descarga anónima. Solo una prueba de comportamiento en el entorno real (403 en AWS) confirma que el control funciona.
 - **"Actualizar" no siempre es suficiente.** Node 18 ya llegó a fin de soporte y tenía más vulnerabilidades que Node 14. Lo que llevó la imagen a 0 fue combinar una versión LTS vigente, base mínima (Alpine), build en dos etapas y quitar herramientas que no se usan.
 - **Autenticar no es autorizar.** Validar el JWT (401) y validar el rol (403) son controles distintos; las pruebas con token falsificado y `alg=none` confirman que la validación no se puede saltar.
 
 ## Estructura del repositorio
 
 ```
-terraform/                 Bucket S3 seguro + rol/política IAM (cuenta AWS estándar)
-terraform/iam-policy.json  Política IAM de mínimo privilegio (solo s3:GetObject)
-terraform-learnerlab/      Variante desplegada en AWS Academy Learner Lab (vía CloudFormation)
-docker/inseguro/           Dockerfile con imagen obsoleta (node:14)
-docker/seguro/             Dockerfile actualizado y endurecido
-api/                       API Express con middleware JWT, pruebas, OpenAPI y Dockerfile
-diagrama/                  Diagrama de arquitectura (PNG y draw.io)
-reportes/                  Trivy, OWASP ZAP, validación S3 y pruebas JWT
-```
-
-### Cómo reproducir
-
-```bash
-# Fase 1 – IaC
-cd terraform-learnerlab && terraform init && terraform apply
-aws s3api get-bucket-policy-status --bucket actividad3-seguro-2024-dags
-
-# Fase 2 – Contenedores
-trivy image node:14
-docker build -t actividad3-api:seguro api && trivy image actividad3-api:seguro
-
-# Fase 3 – API JWT + ZAP
-docker run -d -p 3000:3000 -e JWT_SECRET="$(openssl rand -hex 32)" actividad3-api:seguro
-cd api && npm install && node test.js
+compose.yaml            Fase 1 · LocalStack (S3) solo en localhost
+providers.tf            Fase 1 · provider AWS → LocalStack, credenciales ficticias, candado de cuenta
+main.tf                 Fase 1 · bucket + cifrado AES256 + 4 bloqueos (3 recursos)
+.env.example            Plantilla para el token (el .env real NO se sube)
+prueba.txt              Archivo de prueba subido al bucket
+evidencias-fase1/       Versiones, salud, validate/plan/apply y consultas AWS CLI
+iam/iam-policy.json     Política IAM de mínimo privilegio (solo s3:GetObject)
+docker/inseguro/        Fase 2 · Dockerfile con imagen obsoleta (node:14)
+docker/seguro/          Fase 2 · Dockerfile actualizado y endurecido
+api/                    Fase 3 · API Express con middleware JWT, pruebas, OpenAPI y Dockerfile
+diagrama/               Diagrama de arquitectura (PNG y draw.io)
+reportes/               Trivy, OWASP ZAP, pruebas JWT y referencia en AWS real
 ```
 
 ## Referencias
 
-- AWS. (s.f.). *Nivel gratuito de AWS*. https://aws.amazon.com/es/free
+- LocalStack. (2026). *LocalStack for AWS – Pricing*. https://www.localstack.cloud/pricing
+- LocalStack. (2026). *LocalStack Docs*. https://docs.localstack.cloud
 - Terraform. (s.f.). *Install Terraform*. https://developer.hashicorp.com/terraform/install
 - Docker. (2025). *Docker: Accelerated Container Application Development*. https://www.docker.com
 - Aqua Security. (2025). *Trivy: Simple and Comprehensive Vulnerability Scanner for Containers*. https://trivy.dev

@@ -1,0 +1,13 @@
+$ docker compose ps
+NAME                    IMAGE                             STATUS                    PORTS
+localstack-actividad3   localstack/localstack:2026.10.6   Up 12 seconds (healthy)   127.0.0.1:4566->4566/tcp
+
+$ curl -s http://localhost:4566/_localstack/health
+{
+  "services": {
+    "s3": "available",
+    "sts": "available"
+  },
+  "edition": "pro",
+  "version": "2026.10.6"
+}
