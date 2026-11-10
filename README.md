@@ -384,7 +384,9 @@ Significa que el bucket **no tiene política de bucket** asociada; no es una con
 
 En [app.localstack.cloud](https://app.localstack.cloud) → **Resource Browser → S3**, con el endpoint `http://localhost:4566`, se localiza el bucket `actividad3-seguro-local`, el archivo `prueba.txt` y su configuración de cifrado.
 
-> 📸 Captura del Dashboard: se agrega en `evidencias-fase1/dashboard_localstack.png`.
+![Dashboard de LocalStack: bucket actividad3-seguro-local con prueba.txt](evidencias-fase1/dashboard_localstack.png)
+
+La instancia aparece en verde en `localhost.localstack.cloud:4566`, con la cuenta simulada `000000000000`, y el bucket contiene `prueba.txt` (59 bytes), el mismo archivo subido en el paso 9.
 
 ### Conclusión de la Fase 1: declarado vs. consultado vs. aplicado
 
