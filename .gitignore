@@ -1,0 +1,15 @@
+# Terraform: estado (contiene IDs de cuenta/recursos) y binarios del provider
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+# Node
+node_modules/
+npm-debug.log
+# Secretos
+.env
+*.pem
+.aws/
+# macOS
+.DS_Store

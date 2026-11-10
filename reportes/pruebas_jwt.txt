@@ -1,0 +1,7 @@
+PASS  GET /api/public sin token            esperado=200 obtenido=200
+PASS  GET /api/admin sin token             esperado=401 obtenido=401
+PASS  GET /api/admin token falsificado     esperado=401 obtenido=401
+PASS  GET /api/admin alg=none              esperado=401 obtenido=401
+PASS  GET /api/admin rol user              esperado=403 obtenido=403
+PASS  GET /api/admin rol admin             esperado=200 obtenido=200
+PASS  GET /api/profile rol user            esperado=200 obtenido=200

@@ -1,0 +1,60 @@
+### aws s3api get-bucket-policy-status --bucket actividad3-seguro-2024-dags
+{
+    "PolicyStatus": {
+        "IsPublic": false
+    }
+}
+
+### aws s3api get-public-access-block --bucket actividad3-seguro-2024-dags
+{
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+    }
+}
+
+### aws s3api get-bucket-encryption --bucket actividad3-seguro-2024-dags
+{
+    "ServerSideEncryptionConfiguration": {
+        "Rules": [
+            {
+                "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                },
+                "BucketKeyEnabled": false,
+                "BlockedEncryptionTypes": {
+                    "EncryptionType": [
+                        "SSE-C"
+                    ]
+                }
+            }
+        ]
+    }
+}
+
+### aws s3api get-bucket-versioning --bucket actividad3-seguro-2024-dags
+{
+    "Status": "Enabled"
+}
+
+### aws s3api get-bucket-ownership-controls --bucket actividad3-seguro-2024-dags
+{
+    "OwnershipControls": {
+        "Rules": [
+            {
+                "ObjectOwnership": "BucketOwnerEnforced"
+            }
+        ]
+    }
+}
+
+### Prueba: acceso anónimo desde Internet
+HTTP 403 (403 = acceso denegado)
+
+### Prueba: subir objeto y verificar cifrado
+"AES256"
+
+### Prueba: lectura anónima del objeto
+HTTP 403
