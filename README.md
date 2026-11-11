@@ -56,6 +56,14 @@ Terraform  ──►  LocalStack :4566 (contenedor Docker, solo localhost)  ─�
 
 Se necesita una cuenta gratuita en [localstack.cloud](https://www.localstack.cloud/pricing) (LocalStack for AWS → **Hobby — Free**) y su **Auth Token**. El token es un secreto: va solo en un archivo `.env` local que **está en `.gitignore`**.
 
+**Plan Hobby — Free seleccionado y activo** (capturas sin datos de cuenta ni token):
+
+| Página de precios: LocalStack for AWS → Hobby | Cuenta: suscripción activa Hobby (AWS) |
+| --- | --- |
+| ![Plan Hobby en la página de precios](evidencias-fase1/plan_hobby_pricing.png) | ![Suscripción Hobby activa en Billing](evidencias-fase1/plan_hobby_activo.png) |
+
+En Billing, **"IAM policy enforcement" aparece como función del plan Base**, no del Hobby. Esto explica el resultado del paso 10: con el plan Hobby, LocalStack no aplica la autorización de IAM.
+
 ### Instrucciones de ejecución
 
 ```bash
@@ -372,6 +380,7 @@ BucketName: actividad3-seguro-local
 LocalStack **aceptó la descarga sin firmar** aunque el bucket tiene los 4 controles de bloqueo público. Esto se trata como **limitación del simulador**, no como exposición real:
 
 - LocalStack, por defecto, **no evalúa autorización** (IAM ni políticas de recursos; la opción `ENFORCE_IAM` viene desactivada). Su objetivo es emular las API de AWS para desarrollo, no replicar todo el modelo de permisos.
+- En el plan **Hobby** la aplicación de políticas IAM (*IAM policy enforcement*) ni siquiera está incluida: es función del plan Base (ver captura de Billing arriba).
 - El bloqueo de acceso público sí quedó **declarado y consultable** (paso 8), pero el simulador no lo **aplica** a las solicitudes.
 - Además, el puerto está publicado solo en `127.0.0.1`, así que nadie fuera de esta computadora puede alcanzarlo.
 - **Validación independiente:** en una prueba previa en AWS real (AWS Academy Learner Lab) con la misma configuración, el acceso anónimo fue **rechazado con HTTP 403** ([referencia-aws-real/validacion_s3_learnerlab.txt](reportes/referencia-aws-real/validacion_s3_learnerlab.txt)).
