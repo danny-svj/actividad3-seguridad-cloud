@@ -10,7 +10,7 @@ Prácticas de seguridad aplicadas en tres capas, cada una validada con evidencia
 | 2 · Contenedores | Imagen Docker final con **0 vulnerabilidades** (node:14 tenía 23 críticas) | [trivy_actividad3-api_seguro.txt](reportes/trivy_actividad3-api_seguro.txt) |
 | 3 · Desarrollo seguro | API JWT: **7/7** pruebas de autenticación/autorización · OWASP ZAP **120 PASS, 0 FAIL** | [pruebas_jwt.txt](reportes/pruebas_jwt.txt) · [zap_reporte.html](reportes/zap_reporte.html) |
 
-> ⚠️ **Nada de la Fase 1 apunta a AWS real.** Todo corre en un contenedor LocalStack en `localhost`, con credenciales ficticias. No se requiere cuenta AWS.
+>  **Nada de la Fase 1 apunta a AWS real.** Todo corre en un contenedor LocalStack en `localhost`, con credenciales ficticias. No se requiere cuenta AWS.
 
 ## Índice
 
